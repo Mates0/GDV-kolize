@@ -9,7 +9,7 @@ public class Read {
     public static String read() {
         String mesh = "";
         try {
-            BufferedReader br = new BufferedReader(new FileReader("Maze.txt"));
+            BufferedReader br = new BufferedReader(new FileReader("maze.txt"));
             String nextline = br.readLine();
             while (nextline != null) {
                 mesh += nextline + "\n";
