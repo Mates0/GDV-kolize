@@ -4,79 +4,77 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL33;
 
+import java.util.ArrayList;
+
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        String maze = Read.read();
-        String[] bars = maze.split("\n");
-        int distance = bars.length;
-        int[][] numbers = new int[distance][distance];
-        float area = 2 / (float) distance;
+        String file = "-0.19999999;-1.0;0.4\n" +
+                "0.20000005;-1.0;0.4\n" +
+                "0.6;-1.0;0.4\n" +
+                "0.6;-0.6;0.4\n" +
+                "-1.0;-0.19999999;0.4\n" +
+                "-0.6;-0.19999999;0.4\n" +
+                "-0.19999999;-0.19999999;0.4\n" +
+                "0.6;-0.19999999;0.4\n" +
+                "-1.0;0.20000005;0.4\n" +
+                "-1.0;0.6;0.4\n" +
+                "-0.6;0.6;0.4\n" +
+                "-0.19999999;0.6;0.4\n";
 
-        for (int i = 0; i < distance; i++) {
-            for (int j = 0; j < distance; j++) {
-                numbers[i][j] = bars[i].charAt(j);
-            }
-        }
-
-        //region: Window init
+        String[] filesplit = file.split("\n");
+        ArrayList<Block> squares = new ArrayList<>();
         GLFW.glfwInit();
-
-        // Tell GLFW what version of OpenGL we want to use.
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 3);
-
-        // Create the window...
-        // We can set multiple options with glfwWindowHint ie. fullscreen, resizability etc.
-        long window = GLFW.glfwCreateWindow(800, 600, "maze", 0, 0);
+        long window = GLFW.glfwCreateWindow(800, 600, "Collision", 0, 0);
         if (window == 0) {
             GLFW.glfwTerminate();
-            throw new Exception("Error, can't open the window");
+            throw new Exception("Error");
         }
         GLFW.glfwMakeContextCurrent(window);
-
-        // Tell GLFW, that we are using OpenGL
         GL.createCapabilities();
         GL33.glViewport(0, 0, 800, 600);
-
-        // Resize callback
         GLFW.glfwSetFramebufferSizeCallback(window, (win, w, h) -> GL33.glViewport(0, 0, w, h));
-        //endregion
-
         Shaders.initShaders();
+        Block block = new Block(0f, 0f, 0.25f);
 
-        Block[][] squares = new Block[distance][distance];
-        for (int i = 0; i < numbers.length; i++) {
-            for (int j = 0; j < distance; j++) {
-                if (numbers[i][j] == '0') {
-                    squares[i][j] = new Block((j * area - 1), 1 - (i * area), area);
-                } else {
-                    squares[i][j] = null;
-                }
-            }
+        for (String s : filesplit) {
+            String[] filesplit2 = s.split(";");
+            Block square = new Block(Float.parseFloat(filesplit2[0]), Float.parseFloat(filesplit2[1]), Float.parseFloat(filesplit2[2]));
+            squares.add(square);
         }
+
         while (!GLFW.glfwWindowShouldClose(window)) {
-            // Key input management
-            if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS) {
-                GLFW.glfwSetWindowShouldClose(window, true); // Send a shutdown signal...
-            }
-            // Change the background color
+            if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS)
+                GLFW.glfwSetWindowShouldClose(window, true);
+            boolean iscollisionactive = false;
             GL33.glClearColor(0f, 0f, 0f, 1f);
             GL33.glClear(GL33.GL_COLOR_BUFFER_BIT);
-
-            for (int i = 0; i < squares.length; i++) {
-                for (int j = 0; j < squares.length; j++) {
-                    if (squares[i][j] != null) {
-                        squares[i][j].render();
-                    }
-                }
+            for (Block square : squares) {
+                square.render();
             }
-            // Swap the color buffer -> screen tearing solution
+            for (Block square : squares) {
+                if (contact(block, square))
+                    iscollisionactive = true;
+            }
+            block.update(window);
+            block.render();
+            if (!iscollisionactive)
+                block.colorgreen();
+            else
+                block.colorred();
+
             GLFW.glfwSwapBuffers(window);
-            // Listen to input
             GLFW.glfwPollEvents();
         }
-        // Don't forget to cleanup
         GLFW.glfwTerminate();
+    }
+
+    public static boolean contact(Block a, Block b) {
+        return a.gety() + a.getz() / 2 + a.getz() > b.gety() &&
+                a.gety() + a.getz() / 2 < b.gety() + b.getz() &&
+                a.getx() < b.getx() + b.getz() &&
+                a.getx() + a.getz() > b.getx();
     }
 }
